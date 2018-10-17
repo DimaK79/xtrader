@@ -181,6 +181,7 @@ class IStrategy(ABC):
         :return: True if trade should be sold, False otherwise
         """
         current_profit = trade.calc_profit_percent(rate)
+        print(current_profit)
         stoplossflag = self.stop_loss_reached(current_rate=rate, trade=trade, current_time=date,
                                               current_profit=current_profit)
         if stoplossflag.sell_flag:
@@ -199,7 +200,7 @@ class IStrategy(ABC):
 
         if experimental.get('sell_profit_only', False):
             logger.debug('Checking if trade is profitable..')
-            if trade.calc_profit(rate=rate) <= 1:
+            if current_profit <= 0.01:
                 return SellCheckTuple(sell_flag=False, sell_type=SellType.NONE)
         if sell and not buy and experimental.get('use_sell_signal', False):
             logger.debug('Sell signal received. Selling..')

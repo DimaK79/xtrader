@@ -366,8 +366,11 @@ class FreqtradeBot(object):
         # Pick pair based on buy signals
         for _pair in whitelist:
             logger.info('Checking buy signals: %s ',_pair)
-            thistory = self.exchange.get_candle_history(_pair, interval)
-            (buy, sell) = self.strategy.get_signal(_pair, interval, thistory)
+            #thistory = self.exchange.get_candle_history(_pair, interval)
+            #(buy, sell) = self.strategy.get_signal(_pair, interval, thistory)
+            (buy, sell) = (False, False)
+            (buy, sell) = self.exchange.get_indicators(_pair)
+            #print(buy, sell)
 
             if buy and not sell:
                 return self.execute_buy(_pair, stake_amount)
@@ -400,7 +403,7 @@ class FreqtradeBot(object):
         amount = stake_amount / buy_limit
 
         order_id = self.exchange.buy(pair, buy_limit, amount)['orderId']
-        if order_id is not None:
+        if order_id != 0:
             self.rpc.send_msg({
                 'type': RPCMessageType.BUY_NOTIFICATION,
                 'exchange': self.exchange.name.capitalize(),
@@ -544,9 +547,10 @@ class FreqtradeBot(object):
         (buy, sell) = (False, False)
         experimental = self.config.get('experimental', {})
         if experimental.get('use_sell_signal') or experimental.get('ignore_roi_if_buy_signal'):
-            ticker = self.exchange.get_candle_history(trade.pair, self.strategy.ticker_interval)
-            (buy, sell) = self.strategy.get_signal(trade.pair, self.strategy.ticker_interval,
-                                                   ticker)
+            #ticker = self.exchange.get_candle_history(trade.pair, self.strategy.ticker_interval)
+            #(buy, sell) = self.strategy.get_signal(trade.pair, self.strategy.ticker_interval, ticker)
+            (buy, sell) = (False, False)
+            (buy, sell) = self.exchange.get_indicators(trade.pair)
 
         should_sell = self.strategy.should_sell(trade, current_rate, datetime.utcnow(), buy, sell)
         if should_sell.sell_flag:
@@ -668,9 +672,11 @@ class FreqtradeBot(object):
         
         if amount > quaselltrade:
             amount = quaselltrade
-            
-        order_id = self.exchange.sell(str(trade.pair), limit, amount)['orderId']
-        if order_id is not None:
+        
+        if amount > 0:
+             order_id = self.exchange.sell(str(trade.pair), limit, amount)['orderId']
+        
+        if order_id != 0:
             print(order_id)
             trade.open_order_id = order_id
             trade.close_rate_requested = limit

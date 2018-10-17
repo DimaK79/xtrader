@@ -7,11 +7,13 @@ from datetime import datetime
 from math import floor, ceil
 from decimal import Decimal, getcontext
 from binance.client import Client
+from typing import Dict, List, NamedTuple, Tuple
 import math
 import time
 import numpy as np
 import ccxt
 import arrow
+import talib as ta
 
 from freqtrade import constants, OperationalException, DependencyException, TemporaryError
 
@@ -532,3 +534,43 @@ class Exchange(object):
         if not self._api.markets:
             self._api.load_markets()
         return self._api.amount_to_lots(pair, amount)
+    
+    
+    def get_indicators(self, pair)-> Tuple[bool, bool]:
+        try:
+            symbol = pair.replace('/','')
+            candles_5min = np.array(self.client.get_historical_klines(symbol, Client.KLINE_INTERVAL_5MINUTE,"24 hours ago UTC"),dtype='float')
+            candles_15min = np.array(self.client.get_historical_klines(symbol, Client.KLINE_INTERVAL_15MINUTE,"48 hours ago UTC"),dtype='float')
+            candles_1hr = np.array(self.client.get_historical_klines(symbol, Client.KLINE_INTERVAL_1HOUR,"3 days ago UTC"),dtype='float')
+            
+            close_1hr = candles_1hr[:,4]
+            close_15min = candles_15min[:,4]
+            close_5min = candles_5min[:,4]
+            
+            rsi_1 = ta.RSI(close_5min, timeperiod=14)
+            rsi_2 = ta.RSI(close_15min, timeperiod=14)
+            rsi_3 = ta.RSI(close_1hr, timeperiod=14)             
+            
+            ema50 = ta.EMA(close_5min, timeperiod=50)
+            ema200 = ta.EMA(close_5min, timeperiod=200)
+            
+            (buy, sell) = (False, False)
+            
+            if ema50[-1] >= ema200[-1] and rsi_1[-1] < rsi_3[-1] - 20 and rsi_1[-1] !=0 and rsi_2[-1] != 0:
+                buy = True
+            
+            if (rsi_1[-1] > rsi_2[-1] and rsi_1[-1] > rsi_3[-1]) or (rsi_1[-1] > 90 and rsi_2[-1] > 90):
+                sell = True
+            
+            #msg_txt = (buy, sell)
+            msg_txt = ("{}, {}, ; pair: {}, ema50: {:.8f}, ema200: {:.8f}, rsi_1 {:.2f}, rsi_2 {:.2f}, rsi_3 {:.2f}".format(buy, sell, symbol, ema50[-1], ema200[-1], rsi_1[-1], rsi_2[-1], rsi_3[-1]))
+            print(msg_txt)
+        #except  OSError as e:
+        #    (buy, sell) = (False, False)
+        #    print(e)
+        except:
+            (buy, sell) = (False, False)
+            pass            
+                        
+        return buy, sell
+

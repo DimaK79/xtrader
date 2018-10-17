@@ -186,7 +186,7 @@ class StrategyV3(IStrategy):
                 #(dataframe['slowk'] < 10) &
                 #(dataframe['high'].shift(2) > dataframe['sma3']) &
                 (dataframe['ema50'] >= dataframe['ema200']) &
-                (dataframe['rsi'] < (dataframe['resample_{}_rsi'.format(self.get_ticker_indicator() * 7)] - 18)) &
+                (dataframe['rsi'] < (dataframe['resample_{}_rsi'.format(self.get_ticker_indicator() * 7)] - 20)) &
                 (dataframe['rsi'] != 0) &
                 (dataframe['resample_{}_rsi'.format(self.get_ticker_indicator()*3)] != 0)
                 
